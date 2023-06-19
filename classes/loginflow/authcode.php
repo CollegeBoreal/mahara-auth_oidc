@@ -23,6 +23,12 @@ class authcode extends \auth_oidc\loginflow\base {
      * @return mixed Determined by loginflow.
      */
     public function handleredirect() {
+        global $CFG, $USER;
+        if($USER->is_logged_in()) {
+            redirect('/');
+            exit();
+        }
+
         $state = param_variable('state', null);
         $promptlogin = (bool)param_variable('promptlogin', 0);
         if (!empty($state)) {
@@ -31,7 +37,9 @@ class authcode extends \auth_oidc\loginflow\base {
         }
         else {
             // Initial login request.
-            $this->initiateauthrequest($promptlogin, array('forceflow' => 'authcode'));
+            $url=trim($CFG->wwwroot, '/');
+            if (empty($url)) $url='https://' . $_SERVER['SERVER_NAME'];
+            $this->initiateauthrequest($promptlogin, array('forceflow' => 'authcode',$url.'/auth/oidc/redirect.php'));
         }
     }
 
@@ -126,7 +134,9 @@ class authcode extends \auth_oidc\loginflow\base {
 
         // Get token from auth code.
         $client = $this->get_oidcclient();
-        $tokenparams = $client->tokenrequest($authparams['code']);
+        $url=trim($CFG->wwwroot, '/');
+        if (empty($url)) $url='https://' . $_SERVER['SERVER_NAME'];
+        $tokenparams = $client->tokenrequest($authparams['code'], $url .'/auth/oidc/redirect.php');
         if (!isset($tokenparams['id_token'])) {
             throw new \AuthInstanceException(get_string('errorauthnoidtoken', 'auth.oidc'));
         }
